@@ -51,10 +51,20 @@ install_python() (
 
 r_has_expected_version() {
     command -v "$rscript_bin" >/dev/null 2>&1 &&
-        "$rscript_bin" --vanilla -e 'quit(status = as.integer(getRversion() != Sys.getenv("R_VERSION")))'
+        run_rscript --vanilla -e 'quit(status = as.integer(getRversion() != Sys.getenv("R_VERSION")))'
 }
 
-install_r() (
+can_install_with_apt() {
+    if ! command -v apt-get >/dev/null 2>&1; then
+        return 1
+    fi
+    if (( EUID == 0 )); then
+        return 0
+    fi
+    command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null
+}
+
+install_system_r() {
     local profile="$1"
     local -a build_packages=(
         build-essential gfortran pkg-config
@@ -69,11 +79,7 @@ install_r() (
     if r_has_expected_version; then
         apt_install "${build_packages[@]}"
     else
-        if [[ -n "${WORKBENCH_RSCRIPT:-}" ]]; then
-            printf 'WORKBENCH_RSCRIPT must resolve to R %s.\n' "$R_VERSION" >&2
-            exit 2
-        fi
-        local distribution stage package
+        local distribution package
         source /etc/os-release
         case "${ID:-}:${VERSION_ID:-}" in
             ubuntu:22.04|ubuntu:24.04|ubuntu:26.04)
@@ -84,17 +90,58 @@ install_r() (
                     "$R_VERSION" "${PRETTY_NAME:-this Linux distribution}" >&2
                 exit 2 ;;
         esac
-        stage="$(mktemp -d "$WORKBENCH_HOME/r-stage.XXXXXX")"
-        trap 'rm -rf -- "$stage"' EXIT
         package="r-${R_VERSION}_1_amd64.deb"
-        download "https://cdn.posit.co/r/$distribution/pkgs/$package" "$stage/$package"
-        chmod 0755 "$stage"
-        apt_install "$stage/$package" "${build_packages[@]}"
-        rscript_bin="/opt/R/$R_VERSION/bin/Rscript"
+        (
+            stage="$(mktemp -d "$WORKBENCH_HOME/r-stage.XXXXXX")"
+            trap 'rm -rf -- "$stage"' EXIT
+            download "https://cdn.posit.co/r/$distribution/pkgs/$package" "$stage/$package"
+            chmod 0755 "$stage"
+            apt_install "$stage/$package" "${build_packages[@]}"
+        )
+        select_r_runtime "/opt/R/$R_VERSION/bin/Rscript"
+    fi
+}
+
+install_user_r() (
+    if [[ ! -x "$micromamba_bin" ]]; then
+        local stage
+        stage="$(mktemp -d "$WORKBENCH_HOME/micromamba-stage.XXXXXX")"
+        trap 'rm -rf -- "$stage"' EXIT
+        download "https://github.com/mamba-org/micromamba-releases/releases/download/$MICROMAMBA_VERSION/micromamba-linux-64" \
+            "$stage/micromamba"
+        printf '%s  micromamba\n' "$MICROMAMBA_SHA256" | (cd "$stage" && sha256sum --check --strict)
+        mkdir -p "$(dirname -- "$micromamba_bin")"
+        chmod 0755 "$stage/micromamba"
+        mv -T -- "$stage/micromamba" "$micromamba_bin"
+    fi
+
+    local action=create
+    if [[ -f "$r_user_prefix/conda-meta/history" ]]; then
+        action=install
+    fi
+    printf 'Installing R %s and build tools in %s\n' "$R_VERSION" "$r_user_prefix"
+    "$micromamba_bin" --no-rc --root-prefix "$micromamba_root" "$action" \
+        --yes --prefix "$r_user_prefix" --override-channels \
+        --channel https://conda.anaconda.org/conda-forge \
+        "r-base=$R_VERSION" c-compiler cxx-compiler fortran-compiler make pkg-config \
+        libcurl openssl libxml2-devel zlib icu glpk
+)
+
+install_r() (
+    local profile="$1"
+    if [[ -n "${WORKBENCH_RSCRIPT:-}" ]] && ! r_has_expected_version; then
+        printf 'WORKBENCH_RSCRIPT must resolve to R %s.\n' "$R_VERSION" >&2
+        exit 2
+    fi
+    if [[ "$rscript_bin" != "$r_user_prefix/bin/Rscript" ]] && can_install_with_apt; then
+        install_system_r "$profile"
+    elif ! r_has_expected_version; then
+        install_user_r
+        select_r_runtime "$r_user_prefix/bin/Rscript"
     fi
 
     mkdir -p "$R_LIBS_USER"
-    "$rscript_bin" --vanilla "$repo_root/env/install-r.R" "$profile"
+    run_rscript --vanilla "$repo_root/env/install-r.R" "$profile"
 )
 
 install_fiji() (

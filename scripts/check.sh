@@ -43,7 +43,7 @@ case "$profile" in
         ;;
     r|bioc|tcga)
         require_command "$rscript_bin"
-        "$rscript_bin" --vanilla "$repo_root/scripts/checks/r_smoke.R" \
+        run_rscript --vanilla "$repo_root/scripts/checks/r_smoke.R" \
             "$profile" "$repo_root/examples/fixtures/measurements.csv" "$output_dir"
         ;;
     fiji)
