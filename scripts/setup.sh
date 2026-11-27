@@ -79,7 +79,7 @@ install_system_r() {
     if r_has_expected_version; then
         apt_install "${build_packages[@]}"
     else
-        local distribution stage package
+        local distribution package
         source /etc/os-release
         case "${ID:-}:${VERSION_ID:-}" in
             ubuntu:22.04|ubuntu:24.04|ubuntu:26.04)
@@ -90,12 +90,14 @@ install_system_r() {
                     "$R_VERSION" "${PRETTY_NAME:-this Linux distribution}" >&2
                 exit 2 ;;
         esac
-        stage="$(mktemp -d "$WORKBENCH_HOME/r-stage.XXXXXX")"
-        trap 'rm -rf -- "$stage"' EXIT
         package="r-${R_VERSION}_1_amd64.deb"
-        download "https://cdn.posit.co/r/$distribution/pkgs/$package" "$stage/$package"
-        chmod 0755 "$stage"
-        apt_install "$stage/$package" "${build_packages[@]}"
+        (
+            stage="$(mktemp -d "$WORKBENCH_HOME/r-stage.XXXXXX")"
+            trap 'rm -rf -- "$stage"' EXIT
+            download "https://cdn.posit.co/r/$distribution/pkgs/$package" "$stage/$package"
+            chmod 0755 "$stage"
+            apt_install "$stage/$package" "${build_packages[@]}"
+        )
         select_r_runtime "/opt/R/$R_VERSION/bin/Rscript"
     fi
 }

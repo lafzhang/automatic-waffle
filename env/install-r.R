@@ -28,6 +28,10 @@ stopifnot(length(missing_packages(cran_packages)) == 0L)
 
 if (args != "r") {
   version <- Sys.getenv("BIOC_VERSION")
+  # Select the pinned release before installing packages in a new library.
+  if (length(missing_packages("BiocVersion"))) {
+    BiocManager::install(version = version, ask = FALSE, update = FALSE, type = "source")
+  }
   bioc_packages <- c("BiocVersion", "SummarizedExperiment", "limma")
   if (args == "tcga") {
     bioc_packages <- c(bioc_packages, "TCGAbiolinks")
