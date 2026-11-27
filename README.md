@@ -4,7 +4,7 @@
 
 ## 安装和验证
 
-安装入口面向 Linux x86-64。在 Ubuntu 22.04、24.04、26.04 和 Debian 13 上，脚本可安装 Posit 的 R 4.6.1。预装相同 R 版本的 Linux 也可指定 `WORKBENCH_RSCRIPT`，系统依赖仍通过 APT 安装。安装所需工具为 Bash、curl、tar 和 flock，以及 root 或可非交互运行 APT 的 sudo。
+安装入口面向 Linux x86-64，需要 Bash、curl、tar 和 flock。有 APT 安装权限时，脚本可在 Ubuntu 22.04、24.04、26.04 和 Debian 13 上使用 Posit 的 R 4.6.1。普通用户可使用已有的 R 4.6.1，或由脚本用 micromamba 将 R 和编译工具安装到工作台用户缓存。Fiji 需要 unzip 和 python3。
 
 ```bash
 bash scripts/setup.sh all
@@ -22,6 +22,8 @@ bash scripts/check.sh all
 `check.sh` 将每次测试写到 `outputs/smoke/` 下的独立目录。它会打印路径和 Git SHA。失败时返回非零退出码。可以通过第二个参数给出其他输出父目录。
 
 R 使用固定日期的 CRAN 来源与 Bioconductor 3.23 发行线。Python 校验清单中每个安装包的版本，Fiji 下载固定归档并校验其发布方 SHA-256。主要包和运行时版本写入验收目录。
+
+使用用户目录中的 R 时，可从仓库根目录运行 `source scripts/runtime.sh`，然后用 `run_rscript` 执行 R 脚本。`WORKBENCH_RSCRIPT` 可指定已有的 R 4.6.1。系统 R 与用户安装的 R 默认各用自己的包库。
 
 ## 目录用途
 

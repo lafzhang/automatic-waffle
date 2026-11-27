@@ -34,3 +34,39 @@ jobs:
           path: outputs/smoke/
           if-no-files-found: ignore
           retention-days: 14
+
+  rootless-r:
+    name: R and Bioconductor without sudo
+    runs-on: ubuntu-24.04
+    container: debian:13-slim
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Prepare the Debian test container
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl git passwd util-linux
+          useradd --create-home --uid 1000 research
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - name: Install and verify R as an ordinary user
+        run: |
+          chown -R research:research "$GITHUB_WORKSPACE"
+          runuser -u research -- bash -euo pipefail -c '
+            test "$(id -u)" = 1000
+            test -z "$(command -v sudo || true)"
+            test -z "$(command -v Rscript || true)"
+            cat /etc/os-release
+            bash scripts/setup.sh bioc
+            bash scripts/check.sh r
+            bash scripts/check.sh bioc
+          '
+      - name: Upload Debian smoke results
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: rootless-r-smoke-results
+          path: outputs/smoke/
+          if-no-files-found: ignore
+          retention-days: 14

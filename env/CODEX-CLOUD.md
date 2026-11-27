@@ -1,6 +1,6 @@
 # Codex Cloud 环境配置
 
-环境名为 `automatic-waffle-research`。仓库为 `lafzhang/automatic-waffle`，默认分支为 `main`。环境访问选择 `Only me`，首轮配置无需 HTTP 密钥、VPN、预览端口或出站身份。
+环境名为 `automatic-waffle`。仓库为 `lafzhang/automatic-waffle`，默认分支为 `main`。环境访问选择 `Only me`。
 
 ## Install script
 
@@ -13,7 +13,7 @@ bash scripts/check.sh all
 
 安装脚本从仓库根目录运行。初建环境时，核对会话实际执行的命令、四个层的退出状态和安装日志。工作台是批处理环境，Start skill 可以留空。
 
-依赖安装需要 PyPI、GitHub 发布件和实际跳转域名、系统 APT 源、`cdn.posit.co`、`packagemanager.posit.co`、`bioconductor.org` 及其实际下载镜像、`downloads.imagej.net`。按日志补充具体域名。工作流验收使用合成数据。需要访问真实数据的任务按各自来源单独配置。
+普通用户安装 R 时，脚本在工作台用户缓存创建 micromamba 环境。此时需要 GitHub 发布件及实际跳转域名、`conda.anaconda.org`、`packagemanager.posit.co`、`bioconductor.org` 及其实际下载镜像。Python 使用 PyPI，Fiji 使用 `downloads.imagej.net`，具备 APT 权限时的 Posit R 安装使用系统 APT 源和 `cdn.posit.co`。工作流验收使用合成数据。需要访问真实数据的任务按各自来源单独配置。
 
 ## 发布后复验
 
